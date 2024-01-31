@@ -65,7 +65,7 @@
 
             Promise.all(promises).then(() => {
                 // Send the zip file to the API
-                formData.append('zipFile', new Blob([zip]), 'pdf_files.zip');
+                formData.append('file', new Blob([zip]), 'pdf_files.zip');
 
                 let headers = new Headers();
                 headers.append('Access-Control-Allow-Origin', 'http://127.0.0.1:8000');
@@ -73,7 +73,7 @@
                 headers.append('Access-Control-Allow-Credentials', 'true');
                 headers.append("Access-Control-Allow-Headers", "Content-Type, Accept");
                 console.log(new Map(headers))
-                fetch('http://127.0.0.1:8000/evaluate_t', {
+                fetch('http://127.0.0.1:8000/evaluate_v', {
                     method: 'POST',
                     body: formData,
                     headers: headers
