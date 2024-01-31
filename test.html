@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Data Extractor</title>
+<style>
+    /* CSS styles for the page */
+    body {
+        font-family: Arial, sans-serif;
+    }
+    #output {
+        margin-top: 20px;
+    }
+    .pdf-container {
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+    <h1>PDF Data Extractor</h1>
+    <input type="file" id="fileInput" accept=".pdf" multiple>
+    <button onclick="uploadPDFs()">Upload PDFs</button>
+    <div id="output"></div>
+    <div id="pdfContainer" class="pdf-container"></div>
+
+    <script>
+        function uploadPDFs() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            if (files.length === 0) {
+                alert('Please select at least one PDF file.');
+                return;
+            }
+
+            const formData = new FormData();
+
+            // Create a new ZIP file structure
+            let zip = new Uint8Array(0);
+
+            // Process each PDF file
+            const promises = Array.from(files).map((file, index) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const fileData = new Uint8Array(event.target.result);
+
+                        // Create a ZIP file structure: [local file header + file data + central directory entry]
+                        const localFileHeader = createLocalFileHeader(file.name, fileData.length);
+                        const centralDirectoryEntry = createCentralDirectoryEntry(file.name, fileData.length);
+
+                        // Concatenate all parts into the ZIP file
+                        const newZip = new Uint8Array(zip.length + localFileHeader.length + fileData.length + centralDirectoryEntry.length);
+                        newZip.set(zip, 0);
+                        newZip.set(localFileHeader, zip.length);
+                        newZip.set(fileData, zip.length + localFileHeader.length);
+                        newZip.set(centralDirectoryEntry, zip.length + localFileHeader.length + fileData.length);
+
+                        zip = newZip;
+                        resolve();
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            });
+
+            Promise.all(promises).then(() => {
+                // Send the zip file to the API
+                formData.append('zipFile', new Blob([zip]), 'pdf_files.zip');
+
+                let headers = new Headers();
+                headers.append('Access-Control-Allow-Origin', 'http://127.0.0.1:8000');
+                headers.append('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, HEAD, OPTIONS');
+                headers.append('Access-Control-Allow-Credentials', 'true');
+                headers.append("Access-Control-Allow-Headers", "Content-Type, Accept");
+                console.log(new Map(headers))
+                fetch('http://127.0.0.1:8000/evaluate_t', {
+                    method: 'POST',
+                    body: formData,
+                    headers: headers
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Display JSON data
+                    const outputDiv = document.getElementById('output');
+                    outputDiv.textContent = JSON.stringify(data, null, 2);
+
+                    // Display PDF files
+                    const pdfContainer = document.getElementById('pdfContainer');
+                    pdfContainer.innerHTML = '';
+                    data.files.forEach(file => {
+                        const pdfEmbed = document.createElement('embed');
+                        pdfEmbed.src = URL.createObjectURL(file);
+                        pdfEmbed.width = '500';
+                        pdfEmbed.height = '400';
+                        pdfContainer.appendChild(pdfEmbed);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
+
+        // Function to create a local file header
+        function createLocalFileHeader(filename, dataSize) {
+            const header = new Uint8Array(30 + filename.length);
+            header.set([80, 75, 3, 4]); // ZIP signature
+            header.set(new Uint8Array([20, 0, 20, 0, 0, 0])); // Version needed, flags, and compression method (no compression)
+            header.set(new Uint8Array([0, 0, 0, 0])); // Modification time and date
+            header.set(getBytes(dataSize, 4), 10); // Compressed size
+            header.set(getBytes(dataSize, 4), 14); // Uncompressed size
+            header.set(getBytes(filename.length, 2), 26); // File name length
+            header.set(getBytes(0, 2), 28); // Extra field length
+            header.set(new TextEncoder().encode(filename), 30); // File name
+            return header;
+        }
+
+        // Function to create a central directory entry
+        function createCentralDirectoryEntry(filename, dataSize) {
+            const entry = new Uint8Array(46 + filename.length);
+            entry.set([80, 75, 1, 2]); // ZIP signature
+            entry.set(new Uint8Array([20, 0, 20, 0, 0, 0])); // Version made by, version needed, flags, and compression method (no compression)
+            entry.set(new Uint8Array([0, 0, 0, 0])); // Modification time and date
+            entry.set(getBytes(dataSize, 4), 14); // Compressed size
+            entry.set(getBytes(dataSize, 4), 18); // Uncompressed size
+            entry.set(getBytes(filename.length, 2), 22); // File name length
+            entry.set(getBytes(0, 2), 24); // Extra field length
+            entry.set(getBytes(0, 2), 26); // File comment length
+            entry.set(new Uint8Array([0, 0, 0, 0])); // Disk number start
+            entry.set(new Uint8Array([0, 0])); // Internal file attributes
+            entry.set(new Uint8Array([0, 0, 0, 0])); // External file attributes
+            entry.set(getBytes(0, 4), 42); // Relative offset of local header
+            entry.set(new TextEncoder().encode(filename), 46); // File name
+            return entry;
+        }
+
+        // Function to convert a number to little-endian byte array
+        function getBytes(value, length) {
+            const bytes = new Uint8Array(length);
+            for (let i = 0; i < length; i++) {
+                bytes[i] = value & 0xFF;
+                value >>= 8;
+            }
+            return bytes;
+        }
+    </script>
+</body>
+</html>
