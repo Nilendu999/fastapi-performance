@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -69,7 +69,7 @@
 
                 let headers = new Headers();
                 headers.append('Access-Control-Allow-Origin', 'http://127.0.0.1:8000');
-                headers.append('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, HEAD, OPTIONS');
+                headers.append('Access-Control-Allow-Methods', 'GET, PUT, POST');
                 headers.append('Access-Control-Allow-Credentials', 'true');
                 headers.append("Access-Control-Allow-Headers", "Content-Type, Accept");
                 console.log(new Map(headers))
@@ -144,3 +144,79 @@
     </script>
 </body>
 </html>
+ -->
+
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>PDF Data Extractor</title>
+ <style>
+     /* CSS styles for the page */
+     body {
+         font-family: Arial, sans-serif;
+     }
+     #output {
+         margin-top: 20px;
+     }
+     .pdf-container {
+         margin-top: 20px;
+     }
+ </style>
+ </head>
+ <body>
+     <h1>PDF Data Extractor</h1>
+     <input type="file" id="fileInput" accept=".pdf" multiple>
+     <button onclick="uploadPDFs()">Upload PDFs</button>
+     <div id="output"></div>
+     <div id="pdfContainer" class="pdf-container"></div>
+ 
+     <script>
+         function uploadPDFs() {
+             const fileInput = document.getElementById('fileInput');
+             const files = fileInput.files;
+             if (files.length === 0) {
+                 alert('Please select at least one PDF file.');
+                 return;
+             }
+ 
+             const formData = new FormData();
+             
+             Array.from(files).forEach(file => {
+                 formData.append('file', file);
+             });
+             let headers = new Headers();
+             headers.append('Access-Control-Allow-Origin', 'http://127.0.0.1:8000/evaluate_t');
+             headers.append('Access-Control-Allow-Methods', 'GET, PUT, POST');
+             headers.append('Access-Control-Allow-Credentials', 'true');
+             headers.append("Access-Control-Allow-Headers", "Content-Type, Accept");
+ 
+             fetch('http://127.0.0.1:8000/evaluate_t', {
+                 method: 'POST',
+                 body: formData ,
+                 headers: headers
+             })
+             .then(response => response.json())
+             .then(data => {
+                 // Display JSON data
+                 const outputDiv = document.getElementById('output');
+                 outputDiv.textContent = JSON.stringify(data, null, 2);
+ 
+                 // Display PDF files
+                 const pdfContainer = document.getElementById('pdfContainer');
+                 pdfContainer.innerHTML = '';
+                 data.files.forEach(file => {
+                     const pdfEmbed = document.createElement('embed');
+                     pdfEmbed.src = URL.createObjectURL(file);
+                     pdfEmbed.width = '500';
+                     pdfEmbed.height = '400';
+                     pdfContainer.appendChild(pdfEmbed);
+                 });
+             })
+             .catch(error => console.error('Error:', error));
+         }
+     </script>
+ </body>
+ </html>
+ 

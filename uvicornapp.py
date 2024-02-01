@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse,FileResponse
 import json
 import zipfile
 import tarfile
+from typing import List
 
 app = FastAPI()
 
@@ -14,18 +15,18 @@ async def send_html():
     file_path = "./test.html"
     return FileResponse(file_path, media_type="text/html")
 @app.post("/evaluate_t") 
-async def extract_and_zip(file: UploadFile = File(...)):
+async def extract_and_zip(file: List[UploadFile] = File(...)):
     index_file = {
         "message": "Evaluation successful",
         "status": "success",
         "data": {
-            "file_name": file.filename
+            "file_name": len(file)
         }
     }
     return JSONResponse(content=index_file)
 
 @app.post("/evaluate_v") 
-async def extract_and_zip(file: UploadFile = File(...)):
+async def extract_and_zip(file: List[UploadFile] = File(...)):
     temp_dir = tempfile.mkdtemp()
     print(file.filename)
     subdirectory_name = file.filename.split(".")[0]

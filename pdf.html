@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer</title>
+</head>
+<body>
+    <h1>PDF Viewer</h1>
+    
+    <div>
+        <label for="pdfFile">Choose a PDF file:</label>
+        <input type="file" id="pdfFile" accept=".pdf">
+    </div>
+
+    <div id="pdfViewer">
+        <!-- PDF content will be loaded here -->
+    </div>
+
+    <script>
+        document.getElementById('pdfFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const pdfViewer = document.getElementById('pdfViewer');
+                pdfViewer.innerHTML = `<embed src="${event.target.result}" type="application/pdf" width="100%" height="600px" />`;
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
